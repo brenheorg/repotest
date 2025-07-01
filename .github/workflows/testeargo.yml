@@ -8,17 +8,14 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Clonar repositório monitorado pelo ArgoCD (Repo B)
+      - name: Obter último commit remoto real (Repo B)
         env:
           REPO_URL: https://github.com/brenhe/infrapdv.git
+          BRANCH: main
         run: |
-          git clone --depth=1 --branch main $env:REPO_URL infrapdv
-          cd infrapdv
-          git fetch origin main
-          git pull origin main
-          $commit_hash = git rev-parse HEAD
-          Write-Host "Último commit do Repo B (atualizado): $commit_hash"
-          echo "GIT_COMMIT_HASH=$commit_hash" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $hash = git ls-remote $env:REPO_URL refs/heads/$env:BRANCH | ForEach-Object { ($_ -split "\s+")[0] }
+          Write-Host "Último commit remoto do Repo B: $hash"
+          echo "GIT_COMMIT_HASH=$hash" | Out-File -FilePath $env:GITHUB_ENV -Append
         shell: powershell
 
       - name: Login no ArgoCD
