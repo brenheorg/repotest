@@ -12,10 +12,12 @@ jobs:
         env:
           REPO_URL: https://github.com/brenhe/infrapdv.git
         run: |
-          git clone $env:REPO_URL infrapdv
+          git clone --depth=1 --branch main $env:REPO_URL infrapdv
           cd infrapdv
+          git fetch origin main
+          git pull origin main
           $commit_hash = git rev-parse HEAD
-          Write-Host "Último commit do Repo B: $commit_hash"
+          Write-Host "Último commit do Repo B (atualizado): $commit_hash"
           echo "GIT_COMMIT_HASH=$commit_hash" | Out-File -FilePath $env:GITHUB_ENV -Append
         shell: powershell
 
