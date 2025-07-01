@@ -1,0 +1,45 @@
+name: Check Commit ARGO Outro Repo
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-argocd-commit:
+    runs-on: self-hosted
+
+    steps:
+      - name: Clonar repositório monitorado pelo ArgoCD (Repo B)
+        env:
+          REPO_URL: https://github.com/brenhe/infrapdv2.git
+        run: |
+          git clone $env:REPO_URL infrapdv2
+          cd infrapdv2
+          $commit_hash = git rev-parse HEAD
+          Write-Host "Último commit do Repo B: $commit_hash"
+          echo "GIT_COMMIT_HASH=$commit_hash" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: powershell
+
+      - name: Login no ArgoCD
+        env:
+          ARGOCD_SERVER: localhost:8080
+          ARGOCD_USERNAME: ${{ secrets.ARGOCD_USERNAME }}
+          ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
+        run: |
+          & "C:\Program Files (x86)\ArgoCD\argocd.exe" login $env:ARGOCD_SERVER --username $env:ARGOCD_USERNAME --password $env:ARGOCD_PASSWORD --insecure
+        shell: powershell
+
+      - name: Obter hash do commit no ArgoCD e comparar
+        env:
+          ARGOCD_APP_NAME: clone
+        run: |
+          $hash_argocd = & "C:\Program Files (x86)\ArgoCD\argocd.exe" app get $env:ARGOCD_APP_NAME -o json | ConvertFrom-Json | Select-Object -ExpandProperty status | Select-Object -ExpandProperty sync | Select-Object -ExpandProperty revision
+          Write-Host "Commit no ArgoCD: $hash_argocd"
+          Write-Host "Commit no Repo B: $env:GIT_COMMIT_HASH"
+
+          if ($hash_argocd -eq $env:GIT_COMMIT_HASH) {
+            Write-Host "✅ Commits estão sincronizados!"
+          } else {
+            Write-Error "❌ Hash diferente! O ArgoCD ainda não aplicou o commit mais recente."
+            exit 1
+          }
+        shell: powershell
