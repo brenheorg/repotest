@@ -10,10 +10,10 @@ jobs:
     steps:
       - name: Clonar repositório monitorado pelo ArgoCD (Repo B)
         env:
-          REPO_URL: https://github.com/brenhe/infrapdv2.git
+          REPO_URL: https://github.com/brenhe/infrapdv.git
         run: |
-          git clone $env:REPO_URL infrapdv2
-          cd infrapdv2
+          git clone $env:REPO_URL infrapdv
+          cd infrapdv
           $commit_hash = git rev-parse HEAD
           Write-Host "Último commit do Repo B: $commit_hash"
           echo "GIT_COMMIT_HASH=$commit_hash" | Out-File -FilePath $env:GITHUB_ENV -Append
