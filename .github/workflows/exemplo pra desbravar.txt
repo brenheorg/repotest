@@ -1,0 +1,97 @@
+- name: Validar hash ArgoCD x commit do repositório (sem login e token)
+  env:
+    ARGOCD_HOST: http://argocd.example.local:8080
+    ARGOCD_APP_NAME: ${{ env.ARGOCD_APP_NAME }}     # nome da app/repo ArgoCD dinâmico
+    REPO_URL: https://github.com/${{ github.repository }}.git
+    REPO_BRANCH: ${{ github.ref_name }}
+    GITHUB_SHA: ${{ github.sha }}
+  run: |
+    echo "App ArgoCD: $ARGOCD_APP_NAME"
+    echo "Repo URL: $REPO_URL"
+    echo "Branch: $REPO_BRANCH"
+    echo "Commit GitHub: $GITHUB_SHA"
+
+    # Obter hash do ArgoCD
+    hash_argocd=$(curl -s "$ARGOCD_HOST/api/v1/applications/$ARGOCD_APP_NAME" | jq -r .status.sync.revision)
+    echo "Hash ArgoCD: $hash_argocd"
+
+    # Obter hash do repositório remoto
+    hash_repo=$(git ls-remote $REPO_URL refs/heads/$REPO_BRANCH | awk '{print $1}')
+    echo "Hash do repo remoto: $hash_repo"
+
+    # Comparar hashes
+    if [ "$hash_argocd" = "$hash_repo" ]; then
+      echo "✅ Commits sincronizados"
+    else
+      echo "❌ Commits diferentes, ArgoCD ainda não aplicou o commit mais recente"
+      exit 1
+    fi
+  shell: bash
+
+
+
+------------------------------------------
+
+versão com inputs:
+
+
+on:
+  workflow_call:
+    inputs:
+      argocd_app_name:
+        description: "Nome da aplicação no ArgoCD"
+        required: true
+        type: string
+      repo_url:
+        description: "URL do repositório Git remoto"
+        required: true
+        type: string
+      repo_branch:
+        description: "Branch do repositório Git"
+        required: true
+        type: string
+
+jobs:
+  check-argocd-commit:
+    runs-on: ubuntu-latest
+
+    env:
+      ARGOCD_HOST: http://argocd.example.local:8080  # ajuste para seu ArgoCD real
+
+    steps:
+      - name: Validar hash ArgoCD x commit do repositório
+        env:
+          ARGOCD_APP_NAME: ${{ inputs.argocd_app_name }}
+          REPO_URL: ${{ inputs.repo_url }}
+          REPO_BRANCH: ${{ inputs.repo_branch }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          echo "App ArgoCD: $ARGOCD_APP_NAME"
+          echo "Repo URL: $REPO_URL"
+          echo "Branch: $REPO_BRANCH"
+          echo "Commit GitHub: $GITHUB_SHA"
+
+          hash_argocd=$(curl -s "$ARGOCD_HOST/api/v1/applications/$ARGOCD_APP_NAME" | jq -r .status.sync.revision)
+          echo "Hash ArgoCD: $hash_argocd"
+
+          hash_repo=$(git ls-remote $REPO_URL refs/heads/$REPO_BRANCH | awk '{print $1}')
+          echo "Hash do repo remoto: $hash_repo"
+
+          if [ "$hash_argocd" = "$hash_repo" ]; then
+            echo "✅ Commits sincronizados"
+          else
+            echo "❌ Commits diferentes, ArgoCD ainda não aplicou o commit mais recente"
+            exit 1
+          fi
+        shell: bash
+--------------------------
+chamar de outro repo: 
+
+jobs:
+  call-check:
+    uses: org/central-repo/.github/workflows/check-argocd-commit.yml@main
+    with:
+      argocd_app_name: meu-app
+      repo_url: https://github.com/org/meu-repo.git
+      repo_branch: main
+
