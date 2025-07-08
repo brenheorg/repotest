@@ -1,0 +1,70 @@
+name: Listar acessos por time e usuário e gerar XLSX com anomalia
+
+on:
+  workflow_dispatch:
+
+jobs:
+  listar-acessos:
+    runs-on: ubuntu-latest
+    env:
+      ORG: brenheorg
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar GitHub CLI, jq e Python
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh jq python3 python3-pip
+          pip3 install --break-system-packages pandas openpyxl
+
+      - name: Gerar CSV de acessos (times e usuários)
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          ORG: brenheorg
+        run: |
+          echo "Repositorio,Time,Usuario,Permissao" > acessos_completos.csv
+          
+          repos=$(gh repo list "$ORG" --limit 1000 --json name -q '.[].name')
+          
+          for repo in $repos; do
+            echo "🔍 Processando repositório: $repo"
+
+            # Times e permissões
+            teams_json=$(gh api "/repos/$ORG/$repo/teams")
+            if [ "$teams_json" != "[]" ]; then
+              echo "$teams_json" | jq -r --arg repo "$repo" '.[] | "\($repo),\(.name),,\(.permission)"' >> acessos_completos.csv
+            fi
+
+            # Usuários com acesso direto
+            users_json=$(gh api "/repos/$ORG/$repo/collaborators?affiliation=direct")
+            if [ "$users_json" != "[]" ]; then
+              echo "$users_json" | jq -r --arg repo "$repo" '.[] | "\($repo),,\(.login),\(.permissions | to_entries[] | select(.value == true).key)"' >> acessos_completos.csv
+            fi
+          done
+
+      - name: Converter CSV para XLSX agrupando times, usuários e anomalia
+        run: |
+          echo "import pandas as pd" > convert.py
+          echo "" >> convert.py
+          echo "df = pd.read_csv('acessos_completos.csv')" >> convert.py
+          echo "df = df.fillna('')" >> convert.py
+          echo "def juntar_uniq(series):" >> convert.py
+          echo "    items = set(item.strip() for item in series if item.strip() != '')" >> convert.py
+          echo "    return ';'.join(sorted(items))" >> convert.py
+          echo "agrupado = df.groupby('Repositorio').agg({" >> convert.py
+          echo "    'Time': juntar_uniq," >> convert.py
+          echo "    'Usuario': juntar_uniq," >> convert.py
+          echo "    'Permissao': juntar_uniq" >> convert.py
+          echo "}).reset_index()" >> convert.py
+          echo "agrupado['Anomalia'] = agrupado['Usuario'].apply(lambda x: 'sim' if x else 'não')" >> convert.py
+          echo "agrupado.to_excel('acessos_por_time_usuario.xlsx', index=False)" >> convert.py
+          python3 convert.py
+
+      - name: Publicar arquivo XLSX como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: acessos-times-usuarios-xlsx-${{ github.run_number }}
+          path: acessos_por_time_usuario.xlsx
