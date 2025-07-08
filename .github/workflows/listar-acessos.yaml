@@ -34,29 +34,35 @@ jobs:
             fi
           done
 
-      - name: Listar arquivos e mostrar CSV (debug)
+      - name: Instalar dependências e converter CSV para XLSX
         run: |
-          ls -l acessos_por_time.csv
-          head -n 10 acessos_por_time.csv || echo "Arquivo não encontrado"
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          
+          echo "Python path:"
+          which python3
+          echo "Pip version:"
+          python3 -m pip --version
 
-      - name: Instalar dependências Python
-        run: pip3 install pandas openpyxl
+          # Instala pandas no mesmo contexto do python3
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user pandas openpyxl
 
-      - name: Converter CSV para XLSX com verificação
-        run: |
-          python3 -c "
-              import os
-              import pandas as pd
+          # Cria script local
+          cat <<EOF > converter.py
+import pandas as pd
 
-              file_path = 'acessos_por_time.csv'
-              
-              if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                  df = pd.read_csv(file_path)
-                  df.to_excel('acessos_por_time.xlsx', index=False)
-              else:
-                  print(f'Arquivo {file_path} não existe ou está vazio.')
-                  exit(1)
-              "
+file_path = 'acessos_por_time.csv'
+
+if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+    df = pd.read_csv(file_path)
+    df.to_excel('acessos_por_time.xlsx', index=False)
+else:
+    print(f'Arquivo {file_path} não existe ou está vazio.')
+    exit(1)
+EOF
+          # Executa usando o mesmo binário
+          python3 converter.py
 
       - name: Publicar arquivo XLSX como artefato
         uses: actions/upload-artifact@v4
