@@ -54,7 +54,7 @@ jobs:
           echo "    items = set(item.strip() for item in series if item.strip())" >> convert.py
           echo "    return ';'.join(sorted(items))" >> convert.py
 
-          echo "padrao = {'teamtestethree', 'testeteaam', 'Arquiteto'}" >> convert.py
+          echo "padrao = {'Arquiteto', 'Desenvolvedor', 'Gestor', 'Fabrica'}" >> convert.py
 
           echo "def extrair_keywords(times_str):" >> convert.py
           echo "    palavras_chave = set()" >> convert.py
