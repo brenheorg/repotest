@@ -1,4 +1,4 @@
-name: Listar acessos por time
+name: Listar acessos por time e gerar XLSX
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ jobs:
       - name: Instalar GitHub CLI e jq
         run: |
           sudo apt-get update
-          sudo apt-get install -y gh jq
+          sudo apt-get install -y gh jq python3 python3-pip
 
       - name: Gerar CSV de acessos
         env:
@@ -28,14 +28,25 @@ jobs:
           repos=$(gh repo list "$ORG" --limit 1000 --json name -q '.[].name')
           for repo in $repos; do
             echo "🔍 Verificando: $repo"
-            teams=$(gh api "/orgs/$ORG/repos/$repo/teams" --jq '.[] | {name: .name, permission: .permission}')
-            if [ -n "$teams" ]; then
-              echo "$teams" | jq -r --arg repo "$repo" '. | "\($repo),\(.name),\(.permission)"' >> acessos_por_time.csv
+            json=$(gh api "/orgs/$ORG/repos/$repo/teams")
+            if [ "$json" != "[]" ]; then
+              echo "$json" | jq -r --arg repo "$repo" '.[] | "\($repo),\(.name),\(.permission)"' >> acessos_por_time.csv
             fi
           done
 
-      - name: Publicar CSV como artefato
+      - name: Instalar dependências Python
+        run: pip3 install pandas openpyxl
+
+      - name: Converter CSV para XLSX
+        run: |
+          python3 -c "
+import pandas as pd
+df = pd.read_csv('acessos_por_time.csv')
+df.to_excel('acessos_por_time.xlsx', index=False)
+"
+
+      - name: Publicar arquivo XLSX como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: acessos-times
-          path: acessos_por_time.csv
+          name: acessos-times-xlsx
+          path: acessos_por_time.xlsx
