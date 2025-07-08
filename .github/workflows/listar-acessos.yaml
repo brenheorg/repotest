@@ -34,16 +34,29 @@ jobs:
             fi
           done
 
+      - name: Listar arquivos e mostrar CSV (debug)
+        run: |
+          ls -l acessos_por_time.csv
+          head -n 10 acessos_por_time.csv || echo "Arquivo não encontrado"
+
       - name: Instalar dependências Python
         run: pip3 install pandas openpyxl
 
-      - name: Converter CSV para XLSX
+      - name: Converter CSV para XLSX com verificação
         run: |
           python3 -c "
-import pandas as pd
-df = pd.read_csv('acessos_por_time.csv')
-df.to_excel('acessos_por_time.xlsx', index=False)
-"
+              import os
+              import pandas as pd
+
+              file_path = 'acessos_por_time.csv'
+              
+              if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                  df = pd.read_csv(file_path)
+                  df.to_excel('acessos_por_time.xlsx', index=False)
+              else:
+                  print(f'Arquivo {file_path} não existe ou está vazio.')
+                  exit(1)
+              "
 
       - name: Publicar arquivo XLSX como artefato
         uses: actions/upload-artifact@v4
