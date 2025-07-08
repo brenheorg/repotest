@@ -11,23 +11,21 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_PAT }}
 
     steps:
-      - name: Instalar gh CLI
-        uses: cli/gh-action@v2
+      - name: Instalar GitHub CLI
+        uses: actions/setup-gh-cli@v2
 
-      - name: 🔧 Instalar jq
+      - name: Instalar jq
         run: sudo apt-get install -y jq
 
-      - name: Baixar repositório
+      - name: Checkout do repositório
         uses: actions/checkout@v4
 
       - name: Gerar CSV de acessos
         run: |
           echo "Repositorio,Time,Permissao" > acessos_por_time.csv
-
           repos=$(gh repo list "$ORG" --limit 1000 --json name -q '.[].name')
-
           for repo in $repos; do
-            echo " Verificando: $repo"
+            echo "🔍 Verificando: $repo"
             teams=$(gh api "/orgs/$ORG/repos/$repo/teams" --jq '.[] | {name: .name, permission: .permission}')
             if [ -n "$teams" ]; then
               echo "$teams" | jq -r --arg repo "$repo" '. | "\($repo),\(.name),\(.permission)"' >> acessos_por_time.csv
