@@ -7,7 +7,7 @@ jobs:
   listar-acessos:
     runs-on: ubuntu-latest
     env:
-      ORG: testorg
+      ORG: brenheorg
       GH_TOKEN: ${{ secrets.GH_PAT }}
 
     steps:
