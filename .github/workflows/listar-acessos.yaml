@@ -49,11 +49,5 @@ jobs:
       - name: Publicar arquivo XLSX como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: acessos-times-xlsx
-          path: acessos_por_time.xlsx
-
-      - name: Publicar arquivo XLSX como artefato
-        uses: actions/upload-artifact@v4
-        with:
-          name: acessos-times-xlsx
+          name: acessos-times-xlsx-${{ github.run_number }}
           path: acessos_por_time.xlsx
