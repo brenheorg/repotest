@@ -40,13 +40,12 @@ jobs:
 
       - name: Converter CSV para XLSX
         run: |
-          cat <<EOF > convert.py
+          cat > convert.py << 'EOF'
 import pandas as pd
 
 df = pd.read_csv('acessos_por_time.csv')
 df.to_excel('acessos_por_time.xlsx', index=False)
 EOF
-
           python3 convert.py
 
       - name: Publicar arquivo XLSX como artefato
