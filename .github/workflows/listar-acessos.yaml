@@ -22,7 +22,6 @@ jobs:
       - name: Gerar CSV de acessos
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
-          ORG: brenheorg
         run: |
           echo "Repositorio,Time,Permissao" > acessos_por_time.csv
           repos=$(gh repo list "$ORG" --limit 1000 --json name -q '.[].name')
@@ -34,36 +33,27 @@ jobs:
             fi
           done
 
-      - name: Instalar dependências e converter CSV para XLSX
+      - name: Instalar pandas e openpyxl
         run: |
-          sudo apt-get update
           sudo apt-get install -y python3-pip
-          
-          echo "Python path:"
-          which python3
-          echo "Pip version:"
-          python3 -m pip --version
+          pip3 install --break-system-packages pandas openpyxl
 
-          # Instala pandas no mesmo contexto do python3
-          python3 -m pip install --user --upgrade pip
-          python3 -m pip install --user pandas openpyxl
-
-          # Cria script local
-          cat <<EOF > converter.py
-import os
+      - name: Converter CSV para XLSX
+        run: |
+          cat <<EOF > convert.py
 import pandas as pd
 
-file_path = 'acessos_por_time.csv'
-
-if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-    df = pd.read_csv(file_path)
-    df.to_excel('acessos_por_time.xlsx', index=False)
-else:
-    print(f'Arquivo {file_path} não existe ou está vazio.')
-    exit(1)
+df = pd.read_csv('acessos_por_time.csv')
+df.to_excel('acessos_por_time.xlsx', index=False)
 EOF
-          # Executa usando o mesmo binário
-          python3 converter.py
+
+          python3 convert.py
+
+      - name: Publicar arquivo XLSX como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: acessos-times-xlsx
+          path: acessos_por_time.xlsx
 
       - name: Publicar arquivo XLSX como artefato
         uses: actions/upload-artifact@v4
