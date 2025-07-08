@@ -50,6 +50,7 @@ jobs:
 
           # Cria script local
           cat <<EOF > converter.py
+import os
 import pandas as pd
 
 file_path = 'acessos_por_time.csv'
