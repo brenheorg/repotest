@@ -44,7 +44,11 @@ jobs:
           echo "import pandas as pd" > convert.py
           echo "" >> convert.py
           echo "df = pd.read_csv('acessos_por_time.csv')" >> convert.py
-          echo "df.to_excel('acessos_por_time.xlsx', index=False)" >> convert.py
+          echo "agrupado = df.groupby('Repositorio').agg({" >> convert.py
+          echo "    'Time': lambda x: ';'.join(sorted(set(x)))," >> convert.py
+          echo "    'Permissao': lambda x: ';'.join(sorted(set(x)))" >> convert.py
+          echo "}).reset_index()" >> convert.py
+          echo "agrupado.to_excel('acessos_por_time.xlsx', index=False)" >> convert.py
           python3 convert.py
 
       - name: Publicar arquivo XLSX como artefato
